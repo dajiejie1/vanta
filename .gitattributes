@@ -1,0 +1,7 @@
+* text=auto
+Containerfile text eol=lf
+*.sh text eol=lf
+*.yml text eol=lf
+*.toml text eol=lf
+image-template.env text eol=lf
+system_files/usr/bin/* text eol=lf

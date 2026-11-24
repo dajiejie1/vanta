@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Vanta Lab
+Comment=Toolbox for development and reverse engineering
+Exec=vanta-lab
+Icon=utilities-terminal
+Terminal=true
+Categories=Development;System;

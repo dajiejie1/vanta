@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=Vanta Hardware Check
+Comment=Show CPU, KVM and GPU status
+Exec=vanta-check
+Icon=utilities-system-monitor
+Terminal=true
+Categories=System;

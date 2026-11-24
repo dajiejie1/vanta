@@ -1,0 +1,5 @@
+Vanta 0.1
+Base: Bazzite NVIDIA Open (Fedora Atomic)
+Architecture: x86_64
+CPU: AMD or Intel with virtualization support
+Lab: Distrobox Fedora 45

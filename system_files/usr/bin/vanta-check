@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+printf 'Vanta hardware check\n'
+printf 'Architecture: %s\n' "$(uname -m)"
+vendor="$(awk -F: '/vendor_id/{gsub(/^[[:space:]]+/, "", $2); print $2; exit}' /proc/cpuinfo)"
+printf 'CPU vendor: %s\n' "${vendor:-unknown}"
+case "$vendor" in
+    AuthenticAMD) backend=kvm_amd ;;
+    GenuineIntel) backend=kvm_intel ;;
+    *) backend=unknown ;;
+esac
+printf 'KVM backend: %s\n' "$backend"
+if grep -Eq '(^|[[:space:]])(svm|vmx)([[:space:]]|$)' /proc/cpuinfo && [[ -e /dev/kvm ]]; then
+    printf 'Hardware virtualization: available\n'
+else
+    printf 'Hardware virtualization: unavailable or disabled in firmware\n'
+fi
+if command -v nvidia-smi >/dev/null 2>&1; then
+    nvidia-smi --query-gpu=name,driver_version --format=csv,noheader || true
+else
+    printf 'NVIDIA utility: unavailable\n'
+fi
+if command -v steam >/dev/null 2>&1; then
+    printf 'Steam command: available\n'
+else
+    printf 'Steam command: check desktop installation\n'
+fi

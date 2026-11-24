@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v distrobox >/dev/null 2>&1; then
+    printf 'Distrobox is not installed in this image.\n' >&2
+    exit 1
+fi
+if ! command -v podman >/dev/null 2>&1; then
+    printf 'Podman is not installed in this image.\n' >&2
+    exit 1
+fi
+
+if ! podman container exists vanta-lab; then
+    distrobox create --yes \
+        --name vanta-lab \
+        --image registry.fedoraproject.org/fedora-toolbox:45 \
+        --additional-packages "git gcc clang cmake gdb binutils strace python3 python3-pip rust cargo radare2 nmap bind-utils whois jq curl"
+fi
+exec distrobox enter --name vanta-lab
