@@ -1,0 +1,7 @@
+label: VANTA_INSTALLER
+grub2:
+  timeout: 5
+  entries:
+    - name: Install Vanta
+      linux: "/images/pxeboot/vmlinuz inst.stage2=hd:LABEL=VANTA_INSTALLER console=tty0 inst.graphical rhgb quiet"
+      initrd: "/images/pxeboot/initrd.img"
