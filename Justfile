@@ -296,7 +296,7 @@ _rootful_load_image $target_image=image_name $tag=default_tag:
 # Parameters:
 #   target_image: The name of the image to build (ex. localhost/fedora)
 #   tag: The tag of the image to build (ex. latest)
-#   type: The type of image to build (ex. qcow2, raw, iso)
+#   type: The type of image to build (qcow2 or raw)
 #   config: The configuration file to use for the build (default: disk_config/disk.toml)
 
 # Example: just _rebuild-bib localhost/fedora latest qcow2 disk_config/disk.toml
@@ -333,7 +333,7 @@ _build-bib $target_image $tag $type $config: (_rootful_load_image target_image t
 # Parameters:
 #   target_image: The name of the image to build (ex. localhost/fedora)
 #   tag: The tag of the image to build (ex. latest)
-#   type: The type of image to build (ex. qcow2, raw, iso)
+#   type: The type of image to build (qcow2 or raw)
 #   config: The configuration file to use for the build (deafult: disk_config/disk.toml)
 
 # Example: just _rebuild-bib localhost/fedora latest qcow2 disk_config/disk.toml
@@ -347,9 +347,26 @@ build-qcow2 $target_image=("localhost/" + image_name) $tag=default_tag: && (_bui
 [group('Build Virtal Machine Image')]
 build-raw $target_image=("localhost/" + image_name) $tag=default_tag: && (_build-bib target_image tag "raw" "disk_config/disk.toml")
 
-# Build an ISO virtual machine image
+# Build the Vanta installer ISO locally on Linux with Podman
 [group('Build Virtal Machine Image')]
-build-iso $target_image=("localhost/" + image_name) $tag=default_tag: && (_build-bib target_image tag "iso" "disk_config/iso.toml")
+build-iso:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    sudo podman build \
+      --build-arg VANTA_IMAGE=ghcr.io/dajiejie1/vanta:latest \
+      -f installer/Containerfile \
+      -t localhost/vanta-installer:latest .
+    mkdir -p output
+    sudo podman run --privileged --rm \
+      -v "$(pwd)/output:/output" \
+      -v /var/lib/containers/storage:/var/lib/containers/storage \
+      ghcr.io/osbuild/image-builder-cli:latest \
+      --bootc-ref localhost/vanta-installer:latest \
+      --bootc-default-fs ext4 \
+      build bootc-generic-iso
+    sudo chown -R "$(id -u):$(id -g)" output
+    find output -type f -name '*.iso' -print0 | sort -z | xargs -0 -r sha256sum > output/SHA256SUMS
+    test -s output/SHA256SUMS
 
 # Rebuild a QCOW2 virtual machine image
 [group('Build Virtal Machine Image')]
@@ -359,10 +376,6 @@ rebuild-qcow2 $target_image=("localhost/" + image_name) $tag=default_tag: && (_r
 [group('Build Virtal Machine Image')]
 rebuild-raw $target_image=("localhost/" + image_name) $tag=default_tag: && (_rebuild-bib target_image tag "raw" "disk_config/disk.toml")
 
-# Rebuild an ISO virtual machine image
-[group('Build Virtal Machine Image')]
-rebuild-iso $target_image=("localhost/" + image_name) $tag=default_tag: && (_rebuild-bib target_image tag "iso" "disk_config/iso.toml")
-
 # Run a virtual machine with the specified image type and configuration
 _run-vm $target_image $tag $type $config:
     #!/usr/bin/env bash
@@ -370,10 +383,6 @@ _run-vm $target_image $tag $type $config:
 
     # Determine the image file based on the type
     image_file="output/${type}/disk.${type}"
-    if [[ $type == iso ]]; then
-        image_file="output/bootiso/install.iso"
-    fi
-
     # Build the image if it does not exist
     if [[ ! -f "${image_file}" ]]; then
         just "build-${type}" "$target_image" "$tag"
@@ -413,10 +422,6 @@ run-vm-qcow2 $target_image=("localhost/" + image_name) $tag=default_tag: && (_ru
 [group('Run Virtal Machine')]
 run-vm-raw $target_image=("localhost/" + image_name) $tag=default_tag: && (_run-vm target_image tag "raw" "disk_config/disk.toml")
 
-# Run a virtual machine from an ISO
-[group('Run Virtal Machine')]
-run-vm-iso $target_image=("localhost/" + image_name) $tag=default_tag: && (_run-vm target_image tag "iso" "disk_config/iso.toml")
-
 # Run a virtual machine using systemd-vmspawn
 [group('Run Virtal Machine')]
 spawn-vm rebuild="0" type="qcow2" ram="6G":
@@ -424,7 +429,7 @@ spawn-vm rebuild="0" type="qcow2" ram="6G":
 
     set -euo pipefail
 
-    [ "{{ rebuild }}" -eq 1 ] && echo "Rebuilding the ISO" && just build-vm {{ rebuild }} {{ type }}
+    [ "{{ rebuild }}" -eq 1 ] && echo "Rebuilding the VM image" && just build-vm {{ rebuild }} {{ type }}
 
     systemd-vmspawn \
       -M "bootc-image" \

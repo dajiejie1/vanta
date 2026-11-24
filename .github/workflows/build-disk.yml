@@ -14,8 +14,6 @@ jobs:
     steps:
       - name: Free build space
         uses: ublue-os/remove-unwanted-software@695eb75bc387dbcd9685a8e72d23439d8686cba6
-        with:
-          remove-codeql: true
 
       - name: Check out Vanta
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
@@ -56,5 +54,5 @@ jobs:
           name: vanta-iso
           path: output/
           if-no-files-found: error
-          retention-days: 7
+          retention-days: 90
           compression-level: 0
