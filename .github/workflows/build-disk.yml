@@ -9,7 +9,7 @@ permissions:
 
 jobs:
   iso:
-    runs-on: ubuntu-26.04
+    runs-on: ubuntu-24.04
     timeout-minutes: 90
     steps:
       - name: Free build space
