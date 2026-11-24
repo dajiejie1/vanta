@@ -1,68 +1,47 @@
-# Vanta 0.1 — prototype
+# Vanta // 游戏、开发与研究的 Linux 原型
 
-Vanta est une distribution Linux personnalisée pour le jeu, le développement et
-l'analyse technique. Elle dérive de Bazzite. Ce dépôt contient la configuration
-et les scripts destinés à construire une image ISO pour PC x86_64. La chaîne de
-construction n'a pas encore été exécutée de bout en bout.
+> 一台机器，一套严肃的工作环境。能玩、能写代码、能研究系统；不对尚未验证的兼容性作承诺。
 
-La variante principale cible ce PC : Ryzen 5 5600X, RTX 2080 et 32 Go de RAM.
-Elle fonctionne aussi sur un processeur Intel x86_64 compatible. La variante
-NVIDIA requiert un GPU NVIDIA adapté ; une variante AMD/Intel graphique
-demanderait une autre image de base.
+Vanta 基于 [Bazzite](https://github.com/ublue-os/bazzite) 与 [Universal Blue 镜像模板](https://github.com/ublue-os/image-template)。这个仓库提供用于构建 x86_64 安装 ISO 的配置和脚本。**ISO 尚未完成构建、启动与实机验证。**
 
-## Ce qui est prévu dans l'image
+## 设计目标
 
-- Bureau Bazzite avec Steam et Proton.
-- QEMU/KVM, libvirt et virt-manager pour AMD-V ou Intel VT-x.
-- `vanta-check` : état du processeur, de KVM et du GPU, en lecture seule.
-- `vanta-lab` : boîte de développement Fedora 45 créée au premier lancement,
-  avec Rust/Cargo, C/C++, GDB, binutils, radare2, Python, Nmap, outils DNS,
-  WHOIS et jq.
-- Raccourcis de bureau pour les deux outils Vanta.
+| 领域 | 方案 |
+| :--- | :--- |
+| 游戏 | Bazzite 桌面、Steam 与 Proton |
+| 虚拟化 | QEMU/KVM、libvirt、virt-manager；适配 AMD-V 与 Intel VT-x |
+| 状态检查 | `vanta-check` 只读显示 CPU、KVM 与 GPU 信息 |
+| 技术实验室 | `vanta-lab` 首次启动时创建 Fedora 45 Distrobox，包含 Rust/Cargo、C/C++、GDB、binutils、radare2、Python、Nmap、DNS/WHOIS 工具与 jq |
 
-Distrobox partage le dossier personnel de l'hôte. C'est un environnement de
-développement, pas un bac à sable pour des fichiers malveillants. Pour analyser
-un échantillon non fiable, utiliser une machine virtuelle jetable.
+主目标硬件是 **Ryzen 5 5600X + RTX 2080 + 32 GB RAM**。x86_64 Intel 处理器也可作为 CPU 目标；当前基础镜像针对 NVIDIA 显卡。AMD/Intel 显卡需要选择另一条基础镜像路线。
 
-## Jeux
+`vanta-check` 与 `vanta-lab` 都有桌面入口。Distrobox 会共享宿主机的个人目录，它是开发环境，**不是恶意样本沙箱**；不可信样本应放在一次性虚拟机中分析。
 
-La compatibilité Steam/Proton dépend du jeu et du choix de son éditeur pour
-l'anti-cheat. Au 24 novembre 2026, League of Legends avec Vanguard et les
-serveurs officiels Rust protégés par EAC ne sont pas pris en charge dans cette
-image Linux. Conserver Windows pour ces jeux. L'ISO ne modifie pas Windows et
-n'installe pas automatiquement un double démarrage.
+## 游戏兼容性：边界必须说清楚
 
-## Générer l'ISO avec GitHub Actions
+Steam/Proton 能运行哪些游戏，取决于游戏本身及发行商的反作弊支持。截至 **2026-11-24**，Vanguard 版《英雄联盟》和受 EAC 保护的 Rust 官方服务器不能按本镜像的 Linux 路线运行；这些游戏仍需 Windows。Vanta 的 ISO 不会修改 Windows，也不会自动配置双系统。
 
-1. Créer un dépôt GitHub nommé `vanta` et y pousser cette source sur `main`.
-   Avec cette configuration, rendre le package GHCR public pour les futures
-   mises à jour. Un package privé demanderait une authentification à configurer
-   sur Vanta, qui n'est pas incluse ici.
-2. Activer GitHub Actions. Lancer **Build container image** ou pousser sur
-   `main`, puis attendre la réussite de `ghcr.io/<compte>/vanta:latest`.
-3. Lancer **Build Vanta ISO**. Télécharger l'artefact `vanta-iso` et vérifier
-   l'ISO avec `SHA256SUMS`.
-4. Tester le démarrage et l'installateur en machine virtuelle avant de créer
-   une clé USB. Sauvegarder le disque cible avant toute installation.
+## 构建链
 
-Le workflow renseigne automatiquement le nom du compte GitHub dans la
-configuration de l'installateur. Sans secret Cosign `SIGNING_SECRET`, l'image
-conteneur n'est pas signée et l'étape de signature est ignorée.
+```text
+main 分支 → Build container image → ghcr.io/dajiejie1/vanta:latest
+          → Build Vanta ISO（手动触发）→ vanta-iso + SHA256SUMS
+          → 虚拟机启动验证 → 安装介质
+```
 
-## État de construction
+1. 等待 [容器镜像工作流](https://github.com/dajiejie1/vanta/actions/workflows/build.yml) 成功，并确认 `ghcr.io/dajiejie1/vanta:latest` 可用。
+2. 将 GHCR package 设为公开，供安装后的系统获取更新；私有 package 需要额外的认证配置，本仓库尚未提供。
+3. 手动运行 [Build Vanta ISO](https://github.com/dajiejie1/vanta/actions/workflows/build-disk.yml)，下载 `vanta-iso`，核对 `SHA256SUMS`。
+4. 先在虚拟机里验证启动和安装流程，再考虑写入 USB。安装前备份目标磁盘。
 
-Les scripts Bash, les fichiers YAML/TOML et les chemins ont été vérifiés
-statiquement. L'image conteneur et l'ISO ne sont pas encore construits ni
-validés au démarrage. Ce dépôt est un prototype technique, pas une image prête
-à installer sur un ordinateur principal.
+工作流会把仓库所有者写入安装配置。未配置 Cosign `SIGNING_SECRET` 时，签名步骤会跳过；不应把未签名镜像描述成已签名。
 
-## Origine et licence
+## 当前状态
 
-Construit à partir du [modèle Universal Blue](https://github.com/ublue-os/image-template)
-et de [Bazzite](https://github.com/ublue-os/bazzite). Licence du modèle :
-Apache-2.0, voir `LICENSE`.
+脚本、YAML/TOML 与路径完成了静态检查。容器构建工作流已启动，但 ISO 尚未生成或验证。这个仓库是**技术原型**，不是可直接交付给主力电脑安装的成品。
 
-Sources de compatibilité :
-[Valve / Proton](https://partner.steamgames.com/doc/steamdeck/proton),
-[Riot / Vanguard](https://www.leagueoflegends.com/en-ph/news/dev/dev-vanguard-x-lol/),
-[Facepunch / Rust](https://rust.facepunch.com/news/the-lumberjack).
+## 来源与许可
+
+基于 [Universal Blue 镜像模板](https://github.com/ublue-os/image-template) 与 [Bazzite](https://github.com/ublue-os/bazzite)；模板许可为 Apache-2.0，见 [`LICENSE`](LICENSE)。
+
+兼容性资料：[Valve / Proton](https://partner.steamgames.com/doc/steamdeck/proton) · [Riot / Vanguard](https://www.leagueoflegends.com/en-ph/news/dev/dev-vanguard-x-lol/) · [Facepunch / Rust](https://rust.facepunch.com/news/the-lumberjack)
